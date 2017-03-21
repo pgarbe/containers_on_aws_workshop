@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Docker Swarm - KMS'
+
+
+Resources:
+
+  SwarmTokenKey: 
+    Type: "AWS::KMS::Key"
+    Properties: 
+      Description: "KMS key to encrypt swarm join tokens"
+      KeyPolicy:
+        Id: key-docker-swarm
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS:
+            - !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action: kms:*
+          Resource: "*"
+
+
+Outputs:
+
+  SwarmTokenKey:
+    Value: !Ref SwarmTokenKey
+
+  SwarmTokenKeyArn:
+    Value: !GetAtt SwarmTokenKey.Arn
