@@ -38,7 +38,7 @@ Parameters:
 
   TargetGroups:
     Description: Security group for which are allowed to talk to ASG
-    Type: String
+    Type: CommaDelimitedList
     Default: ''
 
   DockerVersion:
