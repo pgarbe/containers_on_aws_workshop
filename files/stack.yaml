@@ -68,7 +68,7 @@ Resources:
 #         ParentVPCStack: !Select [1, !Split ['/', !Ref Vpc]]
 #         KeyName: !Ref KeyName
 #         Version: !Ref Version
-#         SecurityGroups: !GetAtt SecurityGroups.Outputs.SecurityGroup
+#         SecurityGroups: !Join [',', [!GetAtt SecurityGroups.Outputs.SecurityGroup]]
 #         JoinToken: !Ref SwarmManagerJoinToken
 #         DesiredInstances: !If [HasManagerJoinToken, !Ref DesiredManagerInstances, 1]
 #         JoinTokenKmsKey: !GetAtt Kms.Outputs.SwarmTokenKeyArn
@@ -87,7 +87,7 @@ Resources:
 #       Parameters:
 #         ParentVPCStack: !Select [1, !Split ['/', !Ref Vpc]]
 #         SwarmManagerAutoScalingGroup: !GetAtt Manager.Outputs.AutoScalingGroup
-#         SecurityGroups: !GetAtt SecurityGroups.Outputs.SecurityGroup
+#         SecurityGroups: !Join [',', [!GetAtt SecurityGroups.Outputs.SecurityGroup]]
 #         JoinToken: !Ref SwarmWorkerJoinToken
 #         JoinTokenKmsKey: !GetAtt Kms.Outputs.SwarmTokenKeyArn
 #         KeyName: !Ref KeyName

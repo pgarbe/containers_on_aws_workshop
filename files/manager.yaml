@@ -199,7 +199,7 @@ Resources:
     Properties:
       ImageId: ami-6f587e1c # Use Ubuntu to install latest docker-engine
       InstanceType: !Ref InstanceType
-      SecurityGroups: !Ref SecurityGroup
+      SecurityGroups: !Ref SecurityGroups
 
       IamInstanceProfile: !Ref InstanceProfile
       KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']

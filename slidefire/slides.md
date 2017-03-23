@@ -822,12 +822,7 @@ Enable the following parts
 ```yaml
 Resources:
   Manager:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://s3.amazonaws.com/${AWS::StackName}/manager.yaml
-      Parameters:
-        ...
-        TargetGroups: !GetAtt LoadBalancer.Outputs.TargetGroups
+  ...
 
   LoadBalancer:
     Type: AWS::CloudFormation::Stack
@@ -835,6 +830,25 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${AWS::StackName}/loadbalancer.yaml
       Parameters:
         ParentVPCStack: !Select [1, !Split ['/', !Ref Vpc]]
+```
+
+***
+stack.yaml
+
+-
+Forward TargetGroups and SecurityGroups
+
+```yaml
+Resources:
+  Manager:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${AWS::StackName}/manager.yaml
+      Parameters:
+        ...
+
+        SecurityGroups: !Join [',', [!GetAtt SecurityGroups.Outputs.SecurityGroup, !GetAtt LoadBalancer.Outputs.SecurityGroup]]
+        TargetGroups: !GetAtt LoadBalancer.Outputs.TargetGroups
 ```
 
 ***
