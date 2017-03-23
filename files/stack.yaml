@@ -72,6 +72,7 @@ Resources:
 #         JoinToken: !Ref SwarmManagerJoinToken
 #         DesiredInstances: !If [HasManagerJoinToken, !Ref DesiredManagerInstances, 1]
 #         JoinTokenKmsKey: !GetAtt Kms.Outputs.SwarmTokenKeyArn
+#         TargetGroups: !GetAtt LoadBalancer.Outputs.TargetGroups
 
 #   Kms:
 #     Type: AWS::CloudFormation::Stack

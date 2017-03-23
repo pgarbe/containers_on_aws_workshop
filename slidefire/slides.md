@@ -99,6 +99,23 @@ eval $(ssh-agent)
 ssh-add <your key file>.pem
 ```
 
+-
+### Define stack name
+
+Replace "todo" with your username
+
+```bash
+#!/bin/bash -e
+stackname=todo-docker-swarm
+
+aws s3api create-bucket --bucket $stackname
+aws s3 cp . s3://$stackname/ --recursive --include "*.yaml"
+...
+```
+
+***
+deploy.sh
+
 ---
 ### Infrastructure as Code with CloudFormation
 
@@ -142,22 +159,13 @@ Resources:
 
 Outputs:
   InstallURL:
-    Value: !Sub http://{ElasticLoadBalancer.DNSName}/wp-admin/install.php
+    Value: !Sub http://${ElasticLoadBalancer.DNSName}/wp-admin/install.php
     Description: Installation URL of the WordPress website
 ```
 
 
 ---
 ### Basic VPC Setup
-
--
-### Hands on: Create our first stack
-
-
-```bash
-$ git clone git@github.com:pgarbe/containers_on_aws_workshop.git
-$ cd containers_on_aws_workshop/files
-```
 
 -
 ### Hands on: Create our first stack
@@ -177,9 +185,8 @@ stack.yaml
 ### Hands on: Deploy
 
 ```
-$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s)
+$ ./deploy.sh 
 ```
-`Version` parameter is used later to enforce rolling updates
 
 -
 ### VPC Explained
@@ -215,8 +222,7 @@ stack.yaml
 ### Deploy Bastion Host
 
 ```
-$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=KeyName,ParameterValue=<your key name>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name>
 ```
 
 -
@@ -265,8 +271,7 @@ stack.yaml
 ### Deploy our stack
 
 ```
-$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=KeyName,ParameterValue=<your key name>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name>
              
 ```
 
@@ -309,8 +314,7 @@ stack.yaml
 ### Deploy our stack
 
 ```
-$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=KeyName,ParameterValue=<your key name>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name>
              
 ```
 
@@ -519,8 +523,7 @@ manager.yaml
 Create one EC2 instance and initialize swarm cluster!
 
 ```bash
-$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s)
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name>
 ```
 
 </br>  
@@ -532,24 +535,14 @@ $ ssh ubuntu@<Private IP of manager node>
 ```
 
 -
-Get the swarm join tokens and copy them
+Get the swarm join tokens and copy them 
 
 ```bash
 $ docker swarm join-token manager --quiet
-$ docker swarm join-token worker --quiet # For later
+$ docker swarm join-token worker --quiet
 ```
 </br>  
 
-Update the stack and provide manager join token as parameter
-
-```bash
-$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=SwarmManagerJoinToken,ParameterValue=<swarm manager join token>
-```
-
-***
-=> You should see now three manager nodes.
 
 -
 ### Summary
@@ -587,11 +580,8 @@ stack.yaml
 
 
 ```bash
-$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=SwarmManagerJoinToken,ParameterValue=<plain swarm manager join token>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> 
 ```
-
 
 
 -
@@ -698,8 +688,8 @@ manager_token=$(aws kms encrypt \
                 --query CiphertextBlob)
 
 $ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s) \
-              ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token
+              ParameterKey=SwarmManagerJoinToken, \
+              ParameterValue=$manager_token
 ```
 
 -
@@ -752,7 +742,6 @@ worker_token=$(aws kms encrypt \
                 --query CiphertextBlob)
 
 $ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s) \
               ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
               ParameterKey=SwarmWorkerJoinToken,ParameterValue=$worker_token
 ```
@@ -832,8 +821,13 @@ Enable the following parts
 
 ```yaml
 Resources:
-  Vpc:
-    ...
+  Manager:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${AWS::StackName}/manager.yaml
+      Parameters:
+        ...
+        TargetGroups: !GetAtt LoadBalancer.Outputs.TargetGroups
 
   LoadBalancer:
     Type: AWS::CloudFormation::Stack
@@ -851,7 +845,6 @@ stack.yaml
 
 ```bash
 $ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
-              ParameterKey=Version,ParameterValue=$(date +%s) \
               ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
               ParameterKey=SwarmManagerJoinToken,ParameterValue=$worker_token
 ```
