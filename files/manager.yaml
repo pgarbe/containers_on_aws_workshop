@@ -59,6 +59,10 @@ Parameters:
     Type: String
     Default: ''
 
+  # JoinTokenKmsKey:
+  #   Description: 'KMS key to decrypt swarm join tokens'
+  #   Type: String
+
   Version:
     Description: 'Specifiy version to trigger a re-deployment of launch configuration'
     Type: String
@@ -195,7 +199,7 @@ Resources:
             'k_verify_installation':
               command: 'docker run hello-world'
 
-
+                
     Properties:
       ImageId: ami-6f587e1c # Use Ubuntu to install latest docker-engine
       InstanceType: !Ref InstanceType

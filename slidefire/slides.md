@@ -518,6 +518,21 @@ Make sure the node successfully joined the swarm cluster!
 ***
 manager.yaml
 
+-
+Enforce a reployment
+
+```yaml
+      UserData:
+        "Fn::Base64": !Sub |      
+          #!/bin/bash -xe
+
+          # Add some change to user data
+          echo "swarm"
+```
+
+***
+manager.yaml
+
 
 -
 Create one EC2 instance and initialize swarm cluster!
@@ -788,7 +803,7 @@ First, ssh into a manager node
 
 ```bash
 curl https://raw.githubusercontent.com/pgarbe/
-     containers_on_aws_workshop/master/files/docker-stack.yml
+     containers_on_aws_workshop/master/files/docker-stack.yaml
      > docker-stack.yaml
 
 docker stack deploy -c docker-stack.yaml voting-app
@@ -847,7 +862,9 @@ Resources:
       Parameters:
         ...
 
-        SecurityGroups: !Join [',', [!GetAtt SecurityGroups.Outputs.SecurityGroup, !GetAtt LoadBalancer.Outputs.SecurityGroup]]
+        SecurityGroups: !Join [',', 
+          [!GetAtt SecurityGroups.Outputs.SecurityGroup, 
+          !GetAtt LoadBalancer.Outputs.SecurityGroup]]
         TargetGroups: !GetAtt LoadBalancer.Outputs.TargetGroups
 ```
 
