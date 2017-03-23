@@ -41,5 +41,5 @@ IV. Deploy Applications (30 min)
 ## How to run the presentation
 
 ```bash
-docker run -ti -d --name slidefire -v `pwd`/images:/opt/presentation/images -v  `pwd`/slidefire:/opt/presentation/lib/md -v `pwd`/build:/build -p 8000:8000 rossbachp/presentation
+docker run -ti -d --name slidefire -v `pwd`/images:/opt/presentation/images -v  `pwd`/slidefire:/opt/presentation/lib/md -v `pwd`/build:/build -p 8000:8000 pgarbe/slidefire
 ```

@@ -38,7 +38,7 @@ Parameters:
 
   TargetGroups:
     Description: Security group for which are allowed to talk to ASG
-    Type: CommaDelimitedList
+    Type: String
     Default: ''
 
   DockerVersion:
@@ -58,7 +58,6 @@ Parameters:
     Description: 'The token to join the swarm cluster as a manager node'
     Type: String
     Default: ''
-    NoEcho: true
 
   Version:
     Description: 'Specifiy version to trigger a re-deployment of launch configuration'
@@ -68,6 +67,7 @@ Conditions:
 
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
   HasSwarmJoinToken: !Not [!Equals [!Ref JoinToken, '']]
+  HasTargetGroups: !Not [!Equals [!Ref TargetGroups, '']]
 
 
 Resources:
@@ -141,7 +141,7 @@ Resources:
       MinSize: !Ref DesiredInstances
       MaxSize: 7
       DesiredCapacity: !Ref DesiredInstances
-      TargetGroupARNs: !Ref TargetGroups
+      TargetGroupARNs: !If [HasTargetGroups, !Ref TargetGroups, !Ref 'AWS::NoValue']
       MetricsCollection:
       - Granularity: 1Minute
         Metrics:
@@ -156,10 +156,11 @@ Resources:
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: !Ref DesiredInstances
-        MaxBatchSize: '1'
+        MaxBatchSize: !Ref DesiredInstances
         PauseTime: PT10M
         SuspendProcesses:
         - AlarmNotification
+        - AZRebalance
         WaitOnResourceSignals: 'true'
 
 
@@ -219,8 +220,6 @@ Resources:
           apt-get -y install python-setuptools
           easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
           ln -s /root/aws-cfn-bootstrap-latest/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
-
-          echo "${Version}"
 
           cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration 
           cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup

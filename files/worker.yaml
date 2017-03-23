@@ -37,7 +37,7 @@ Parameters:
 
   TargetGroups:
     Description: Security group for which are allowed to talk to ASG
-    Type: CommaDelimitedList
+    Type: String
     Default: ''
 
   SwarmManagerAutoScalingGroup:
@@ -75,6 +75,7 @@ Parameters:
 Conditions:
 
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+  HasTargetGroups: !Not [!Equals [!Ref TargetGroups, '']]
 
 
 Resources:
@@ -146,7 +147,7 @@ Resources:
       MinSize: !Ref DesiredInstances
       MaxSize: 7
       DesiredCapacity: !Ref DesiredInstances
-      TargetGroupARNs: !Ref TargetGroups
+      TargetGroupARNs: !If [HasTargetGroups, !Ref TargetGroups, !Ref 'AWS::NoValue']
       MetricsCollection:
       - Granularity: 1Minute
         Metrics:
@@ -161,10 +162,11 @@ Resources:
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: !Ref DesiredInstances
-        MaxBatchSize: '1'
+        MaxBatchSize: !Ref DesiredInstances
         PauseTime: PT10M
         SuspendProcesses:
         - AlarmNotification
+        - AZRebalance
         WaitOnResourceSignals: 'true'
 
   LaunchConfiguration:

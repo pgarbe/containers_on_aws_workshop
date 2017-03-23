@@ -34,6 +34,12 @@ I have no account, what yet?
 For Mac: https://www.docker.com/docker-mac  
 For Windows: https://www.docker.com/docker-windows
 
+```bash
+$ docker version
+Client:
+ Version:      17.03.0-ce
+ ...
+```
 
 -
 ### Clone Repsoitory
@@ -63,8 +69,6 @@ aws-cli/1.11.63 Python/3.6.0 Linux/4.9.12-moby botocore/1.5.26
 * Create user "dog2017"
 * Assign group "AdminAccess"
 
-TODO Test instructions
-
 -
 ### Configure your credentials
 
@@ -86,8 +90,14 @@ $ aws iam list-users
 -
 ### Setup ssh key
 * Open https://eu-west-1.console.aws.amazon.com/ec2/v2/home#KeyPairs:sort=keyName
-* Create Key Pair (name: dog2017)
-* `chmod 400 ~/dog2017.pem`
+* Create Key Pair
+* Download *.pem file into `files` folder
+
+```bash
+chmod 400 ~/<your key file>.pem
+eval $(ssh-agent)
+ssh-add <your key file>.pem
+```
 
 ---
 ### Infrastructure as Code with CloudFormation
@@ -167,7 +177,7 @@ stack.yaml
 ### Hands on: Deploy
 
 ```
-$ ./deploy ParameterKey=Version,ParameterValue=$(date +%s)
+$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s)
 ```
 `Version` parameter is used later to enforce rolling updates
 
@@ -205,8 +215,8 @@ stack.yaml
 ### Deploy Bastion Host
 
 ```
-$ ./deploy ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=KeyName,ParameterValue=<your key name>
+$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=KeyName,ParameterValue=<your key name>
 ```
 
 -
@@ -221,7 +231,7 @@ Source: https://github.com/widdix/aws-cf-templates
 ### SSH to Bastion Host
 
 ```
-$ ssh -iA ~/dog2017.pem  ec2-user@<Public IP of bastion host>
+$ ssh -A ec2-user@<Public IP of bastion host>
 ```
 
 
@@ -250,6 +260,23 @@ Resources:
 ***
 stack.yaml
 
+
+-
+### Deploy our stack
+
+```
+$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=KeyName,ParameterValue=<your key name>
+             
+```
+
+-
+### Security Groups Explained
+
+* Act as a virtual firewall 
+* Controls inbound and outbound traffic
+* Examples: LoadBalancer, SSH
+
 -
 ### Add new stack for Swarm Manager
 Enable the following parts
@@ -266,7 +293,7 @@ Resources:
         ParentVPCStack: !Select [1, !Split ['/', !Ref Vpc]]
         KeyName: !Ref KeyName
         Version: !Ref Version
-        SwarmSecurityGroup: !GetAtt SecurityGroups.Outputs.SecurityGroups
+        SecurityGroups: !GetAtt SecurityGroups.Outputs.SecurityGroups
 
         # JoinToken: !Ref SwarmManagerJoinToken
         # DesiredInstances: !If [HasManagerJoinToken, !Ref DesiredManagerInstances, 1]
@@ -282,8 +309,8 @@ stack.yaml
 ### Deploy our stack
 
 ```
-$ ./deploy ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=KeyName,ParameterValue=<your key name>
+$ ./deploy.sh ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=KeyName,ParameterValue=<your key name>
              
 ```
 
@@ -327,6 +354,27 @@ Open https://eu-west-1.console.aws.amazon.com/cloudformation
 4. Update stack
 
 
+-
+### Add new stack for Swarm Manager
+Enable the following parts
+
+```yaml
+Resources:
+  Manager:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${AWS::StackName}/manager.yaml
+      Parameters:
+        ...
+
+        JoinToken: !Ref SwarmManagerJoinToken
+        DesiredInstances: !If [HasManagerJoinToken, !Ref DesiredManagerInstances, 1]
+        # JoinTokenKmsKey: !GetAtt Kms.Outputs.SwarmTokenKeyArn
+```
+
+***
+stack.yaml
+
 
 -
 ### Init or Join?
@@ -338,9 +386,10 @@ Open https://eu-west-1.console.aws.amazon.com/cloudformation
       AWS::CloudFormation::Init:
         configSets:
           default:
-            !If [HasSwarmJoinToken, 
-                 [docker-ubuntu, swarm-join], 
-                 [docker-ubuntu, swarm-init]]
+            !If 
+            - HasSwarmJoinToken
+            - [docker-ubuntu, swarm-join]
+            - [docker-ubuntu, swarm-init]
 ```
 ***
 manager.yaml
@@ -470,15 +519,15 @@ manager.yaml
 Create one EC2 instance and initialize swarm cluster!
 
 ```bash
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s)
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s)
 ```
 
 </br>  
 SSH into swarm manager (via bastion host)
 
 ```bash
-$ ssh -iA ~/dog2017.pem ec2-user@<Public IP of bastion host>
+$ ssh -A ec2-user@<Public IP of bastion host>
 $ ssh ubuntu@<Private IP of manager node>
 ```
 
@@ -494,9 +543,9 @@ $ docker swarm join-token worker --quiet # For later
 Update the stack and provide manager join token as parameter
 
 ```bash
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=<swarm manager join token>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=<swarm manager join token>
 ```
 
 ***
@@ -538,9 +587,9 @@ stack.yaml
 
 
 ```bash
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=<plain swarm manager join token>
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=<plain swarm manager join token>
 ```
 
 
@@ -581,7 +630,8 @@ Parameters:
 manager.yaml
 
 -
-Allow instance role to decrypt
+### Allow instance role to decrypt 
+Enable the following policy
 
 ```yaml
 Resources:
@@ -621,12 +671,15 @@ swarm-join:
                       --ciphertext-blob fileb://ciphertextblob \
                       --query Plaintext \
                       --output text | base64 --decode)
+        
+        do
 
-        # docker swarm join \
-        #  --token ${JoinToken} $IP:2377 && break || continue
+          # docker swarm join \
+          #  --token ${JoinToken} $IP:2377 && break || continue
 
-        docker swarm join \
-          --token $JOIN_TOKEN $IP:2377 && break || continue
+          docker swarm join \
+            --token $JOIN_TOKEN $IP:2377 && break || continue
+        done
 
 ```
 
@@ -644,9 +697,9 @@ manager_token=$(aws kms encrypt \
                 --output text \
                 --query CiphertextBlob)
 
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token
 ```
 
 -
@@ -677,7 +730,7 @@ Resources:
       Parameters:
         ParentVPCStack: !Select [1, !Split ['/', !Ref Vpc]]
         SwarmManagerAutoScalingGroup: !GetAtt Manager.Outputs.AutoScalingGroup
-        SwarmSecurityGroup: !GetAtt SecurityGroups.Outputs.SecurityGroup
+        SecurityGroup: !GetAtt SecurityGroups.Outputs.SecurityGroup
         JoinToken: !Ref SwarmWorkerJoinToken
         JoinTokenKmsKey: !GetAtt Kms.Outputs.SwarmTokenKeyArn
         KeyName: !Ref KeyName
@@ -698,16 +751,26 @@ worker_token=$(aws kms encrypt \
                 --output text \
                 --query CiphertextBlob)
 
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=$worker_token
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
+              ParameterKey=SwarmWorkerJoinToken,ParameterValue=$worker_token
 ```
+
+
+-
+### Review worker.yaml
+* Join Swarm
+* Healthcheck
+
 
 -
 ### Summary
 
-* TODO
+* Very similar to manager stack
+* Worker need IP of managers to join the cluster
+* Separate stacks to scale independently
+* Use different KMS keys for managers and workers
 
 
 
@@ -759,12 +822,9 @@ Did we miss something?
 
 -
 ### Application LoadBalancer
-TODO: Picture
 
+![](images/alb.png)
 
--
-### Application LoadBalancer
-TODO: Picture
 
 -
 ### Load Balancer
@@ -790,10 +850,10 @@ stack.yaml
 ### Final deployment
 
 ```bash
-$ ./deploy ParameterKey=KeyName,ParameterValue=<your key name> \
-           ParameterKey=Version,ParameterValue=$(date +%s) \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
-           ParameterKey=SwarmManagerJoinToken,ParameterValue=$worker_token
+$ ./deploy.sh ParameterKey=KeyName,ParameterValue=<your key name> \
+              ParameterKey=Version,ParameterValue=$(date +%s) \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=$manager_token \
+              ParameterKey=SwarmManagerJoinToken,ParameterValue=$worker_token
 ```
 => Check outputs of loadbalancer stack for DNS name
 

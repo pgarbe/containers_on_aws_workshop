@@ -8,13 +8,11 @@ Parameters:
     Description: 'The token to join the swarm cluster as a manager node'
     Type: String
     Default: ''
-    NoEcho: true
 
   SwarmWorkerJoinToken:
     Description: 'The token to join the swarm cluster as a worker node'
     Type: String
     Default: ''
-    NoEcho: true
 
   DesiredManagerInstances:
     Description: 'The number of manager nodes'
@@ -39,7 +37,6 @@ Parameters:
 Conditions:
   HasManagerJoinToken: !Not [!Equals [!Ref SwarmManagerJoinToken, '']]
   HasWorkerJoinToken: !Not [!Equals [!Ref SwarmWorkerJoinToken, '']]
-
 
 Resources:
   Vpc:
